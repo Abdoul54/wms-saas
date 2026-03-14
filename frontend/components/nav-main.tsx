@@ -1,21 +1,12 @@
 "use client"
 
-import { ChevronRight, type LucideIcon } from "lucide-react"
+import { type LucideIcon } from "lucide-react"
 
 import {
-    Collapsible,
-    CollapsibleContent,
-    CollapsibleTrigger,
-} from "@/components/ui/collapsible"
-import {
     SidebarGroup,
-    SidebarGroupLabel,
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
-    SidebarMenuSub,
-    SidebarMenuSubButton,
-    SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
 import { usePathname } from "next/navigation"
 
@@ -39,6 +30,7 @@ export function NavMain({
                 {items?.map((item) => (
                     <SidebarMenuItem key={item.title}>
                         <SidebarMenuButton
+                            tooltip={item.title}
                             isActive={isActive(item.url) ?? false}
                             render={
                                 <a href={item.url}>

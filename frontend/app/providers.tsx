@@ -5,6 +5,8 @@ import { SessionProvider } from 'next-auth/react'
 import { useState } from 'react'
 import type { Session } from 'next-auth'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { DirectionProvider } from '@base-ui/react'
+import { Toaster } from '@/components/ui/sonner'
 
 interface ProvidersProps {
     children: React.ReactNode
@@ -28,9 +30,12 @@ export function Providers({ children, session }: ProvidersProps) {
     return (
         <SessionProvider session={session}>
             <QueryClientProvider client={queryClient}>
-                <TooltipProvider>
-                    {children}
-                </TooltipProvider>
+                <DirectionProvider direction="ltr">
+                    <TooltipProvider>
+                        {children}
+                        <Toaster />
+                    </TooltipProvider>
+                </DirectionProvider>
             </QueryClientProvider>
         </SessionProvider>
     )

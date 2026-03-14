@@ -17,8 +17,8 @@ import {
 
 const nav = [
     {
-        title: 'Users',
-        url: '/user',
+        title: 'Users Management',
+        url: '/users-management',
         icon: User,
     },
 ]
