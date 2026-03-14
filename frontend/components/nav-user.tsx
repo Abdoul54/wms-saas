@@ -30,23 +30,16 @@ import {
     useSidebar,
 } from "@/components/ui/sidebar"
 import { initials } from "@/lib/utils"
-import { useSession } from "next-auth/react"
+import { signOut, useSession } from "next-auth/react"
 import { useLogout } from "@/hooks/use-logout"
 
-export function NavUser({
-    user,
-}: {
-    user: {
-        name: string
-        email: string
-        avatar: string
-    }
-}) {
+export function NavUser() {
     const { isMobile } = useSidebar()
-    const { data } = useSession()
+    const { data: session } = useSession()
     const { logout, loading } = useLogout()
 
-    const name = data?.user?.firstname + ' ' + data?.user?.lastname
+    const name = `${session?.user?.firstname ?? ''} ${session?.user?.lastname ?? ''}`.trim()
+    const email = session?.user?.email ?? ''
     const userInitials = initials(name)
 
     return (
@@ -59,7 +52,7 @@ export function NavUser({
                         </Avatar>
                         <div className="grid flex-1 text-left text-sm leading-tight">
                             <span className="truncate font-medium">{name}</span>
-                            <span className="truncate text-xs">{data?.user?.email}</span>
+                            <span className="truncate text-xs">{session?.user?.email}</span>
                         </div>
                     </SidebarMenuButton>}
                     />
@@ -83,9 +76,15 @@ export function NavUser({
                         </DropdownMenuGroup>
                         <DropdownMenuSeparator />
                         <DropdownMenuGroup>
-                            <DropdownMenuItem onSelect={logout} disabled={loading} variant="destructive">
+                            <DropdownMenuItem
+                                onClick={(e) => {
+                                    e.preventDefault()
+                                    logout()
+                                }}
+                                disabled={loading}
+                                variant="destructive">
                                 <LogOut />
-                                {loading ? 'Logging out...' : 'Log out'}
+                                Log Out
                             </DropdownMenuItem>
                         </DropdownMenuGroup>
                     </DropdownMenuContent>
@@ -95,71 +94,3 @@ export function NavUser({
 
     )
 }
-
-// <SidebarMenu>
-//     <SidebarMenuItem>
-//         <DropdownMenu>
-//             <DropdownMenuTrigger
-//                 render={<SidebarMenuButton
-//                     size="lg"
-//                     className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-//                 >
-//                     <Avatar className="h-8 w-8 rounded-lg">
-//                         <AvatarFallback className="rounded-lg">{userInitials}</AvatarFallback>
-//                     </Avatar>
-//                     <div className="grid flex-1 text-left text-sm leading-tight">
-//                         <span className="truncate font-medium">{user.name}</span>
-//                         <span className="truncate text-xs">{user.email}</span>
-//                     </div>
-//                     <ChevronsUpDown className="ml-auto size-4" />
-//                 </SidebarMenuButton>}
-//             />
-//             <DropdownMenuContent
-//                 className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-//                 side={isMobile ? "bottom" : "right"}
-//                 align="end"
-//                 sideOffset={4}
-//             >
-//                 <DropdownMenuLabel className="p-0 font-normal">
-//                     <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-//                         <Avatar className="h-8 w-8 rounded-lg">
-//                             <AvatarFallback className="rounded-lg">{userInitials}</AvatarFallback>
-//                         </Avatar>
-//                         <div className="grid flex-1 text-left text-sm leading-tight">
-//                             <span className="truncate font-medium">{user.name}</span>
-//                             <span className="truncate text-xs">{user.email}</span>
-//                         </div>
-//                     </div>
-
-//                 </DropdownMenuLabel>
-//                 <DropdownMenuSeparator />
-//                 <DropdownMenuGroup>
-//                     <DropdownMenuItem>
-//                         <Sparkles />
-//                         Upgrade to Pro
-//                     </DropdownMenuItem>
-//                 </DropdownMenuGroup>
-//                 <DropdownMenuSeparator />
-//                 <DropdownMenuGroup>
-//                     <DropdownMenuItem>
-//                         <BadgeCheck />
-//                         Account
-//                     </DropdownMenuItem>
-//                     <DropdownMenuItem>
-//                         <CreditCard />
-//                         Billing
-//                     </DropdownMenuItem>
-//                     <DropdownMenuItem>
-//                         <Bell />
-//                         Notifications
-//                     </DropdownMenuItem>
-//                 </DropdownMenuGroup>
-//                 <DropdownMenuSeparator />
-//                 <DropdownMenuItem>
-//                     <LogOut />
-//                     Log out
-//                 </DropdownMenuItem>
-//             </DropdownMenuContent>
-//         </DropdownMenu>
-//     </SidebarMenuItem>
-// </SidebarMenu >

@@ -1,37 +1,42 @@
 import CredentialsProvider from 'next-auth/providers/credentials'
 import type { NextAuthOptions } from 'next-auth'
 
+// Server-side only — internal Docker URL (e.g. http://nginx/api/wms)
 const API_URL = process.env.API_URL
 
-async function parseJson(res: Response) {
+// ─────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────
+
+async function apiFetch(path: string, init: RequestInit): Promise<any> {
+    const res = await fetch(`${API_URL}${path}`, {
+        ...init,
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            ...(init.headers ?? {}),
+        },
+    })
+
     const contentType = res.headers.get('content-type') ?? ''
 
     if (!contentType.includes('application/json')) {
         const text = await res.text()
-        throw new Error(`Expected JSON but got: ${res.status} ${res.statusText} — ${text.slice(0, 200)}`)
+        throw new Error(`Non-JSON response ${res.status}: ${text.slice(0, 200)}`)
     }
 
-    return res.json()
-}
-
-async function refreshAccessToken(refreshToken: string, accessToken: string) {
-    const res = await fetch(`${API_URL}/auth/refresh`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ refresh_token: refreshToken }),
-    })
-
-    const json = await parseJson(res)
+    const json = await res.json()
 
     if (!res.ok || !json.success) {
-        throw new Error(JSON.stringify({ message: json.message ?? 'Login failed.' }))
+        throw new Error(json.message ?? `Request failed with status ${res.status}`)
     }
 
     return json.data
 }
+
+// ─────────────────────────────────────────────
+// Auth options
+// ─────────────────────────────────────────────
 
 export const authOptions: NextAuthOptions = {
     providers: [
@@ -46,22 +51,15 @@ export const authOptions: NextAuthOptions = {
                     throw new Error('Email and password are required.')
                 }
 
-                const res = await fetch(`${API_URL}/auth/login`, {
+                const data = await apiFetch('/auth/login', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         email: credentials.email,
                         password: credentials.password,
                     }),
                 })
 
-                const json = await parseJson(res)
-
-                if (!res.ok || !json.success) {
-                    throw new Error(json.message ?? 'Login failed.')
-                }
-
-                const { user, access_token, refresh_token, expires_in } = json.data
+                const { user, access_token, refresh_token, expires_in } = data
 
                 return {
                     id: String(user.id),
@@ -72,7 +70,8 @@ export const authOptions: NextAuthOptions = {
                     roles: user.roles,
                     accessToken: access_token,
                     refreshToken: refresh_token,
-                    expiresAt: Date.now() + expires_in * 1000,
+                    // Proactively refresh 1 min before actual expiry
+                    expiresAt: Date.now() + (expires_in - 60) * 1000,
                 }
             },
         }),
@@ -80,6 +79,7 @@ export const authOptions: NextAuthOptions = {
 
     callbacks: {
         async jwt({ token, user }) {
+            // Initial sign in — persist user data into the JWT
             if (user) {
                 return {
                     ...token,
@@ -94,18 +94,25 @@ export const authOptions: NextAuthOptions = {
                 }
             }
 
+            // Token still valid — return as-is
             if (Date.now() < token.expiresAt) {
                 return token
             }
 
+            // Token window has passed — refresh (access token is still accepted
+            // by Sanctum because we set expiresAt 1 min before real expiry)
             try {
-                const refreshed = await refreshAccessToken(token.refreshToken, token.accessToken)
+                const data = await apiFetch('/auth/refresh', {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token.accessToken}` },
+                    body: JSON.stringify({ refresh_token: token.refreshToken }),
+                })
 
                 return {
                     ...token,
-                    accessToken: refreshed.access_token,
-                    refreshToken: refreshed.refresh_token,
-                    expiresAt: Date.now() + refreshed.expires_in * 1000,
+                    accessToken: data.access_token,
+                    refreshToken: data.refresh_token,
+                    expiresAt: Date.now() + (data.expires_in - 60) * 1000,
                     error: undefined,
                 }
             } catch {
@@ -123,6 +130,19 @@ export const authOptions: NextAuthOptions = {
             session.error = token.error
 
             return session
+        },
+    },
+
+    events: {
+        // Best-effort — destroys server-side tokens on logout.
+        // The session is cleared on our side regardless of whether this succeeds.
+        async signOut({ token }: any) {
+            if (!token?.accessToken) return
+
+            await apiFetch('/auth/logout', {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token.accessToken}` },
+            }).catch(() => { })
         },
     },
 

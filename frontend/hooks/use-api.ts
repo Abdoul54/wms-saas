@@ -1,12 +1,13 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
-import axios, { AxiosRequestConfig } from 'axios'
+import axios, { type AxiosRequestConfig } from 'axios'
 import { useMemo } from 'react'
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL
+// Browser-side — goes through Nginx reverse proxy
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL // e.g. /api/wms
 
-export function useApi(authenticated: boolean = true) {
+export function useApi() {
     const { data: session } = useSession()
 
     const instance = useMemo(() => {
@@ -18,19 +19,19 @@ export function useApi(authenticated: boolean = true) {
             },
         })
 
-        if (authenticated && session?.accessToken) {
-            api.interceptors.request.use((config) => {
+        api.interceptors.request.use((config) => {
+            if (session?.accessToken) {
                 config.headers.Authorization = `Bearer ${session.accessToken}`
-                return config
-            })
-        }
+            }
+            return config
+        })
 
         return api
-    }, [authenticated, session?.accessToken])
+    }, [session?.accessToken])
 
     /**
-     * Creates a queryFn for TanStack Query.
-     * Usage: queryFn: queryFn('/users')
+     * queryFn factory for TanStack Query.
+     * @example queryFn: queryFn('/users')
      */
     function queryFn<T>(url: string, config?: AxiosRequestConfig) {
         return async (): Promise<T> => {
@@ -40,8 +41,8 @@ export function useApi(authenticated: boolean = true) {
     }
 
     /**
-     * Creates a mutationFn for TanStack Query.
-     * Usage: mutationFn: mutationFn('post', '/users')
+     * mutationFn factory for TanStack Query.
+     * @example mutationFn: mutationFn('post', '/users')
      */
     function mutationFn<TData, TVariables>(
         method: 'post' | 'put' | 'patch' | 'delete',

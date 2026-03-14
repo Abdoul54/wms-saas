@@ -5,6 +5,8 @@ services:
       context: .
       dockerfile: docker/php/Dockerfile
     container_name: api
+    env_file:
+      - ./backend/.env
     volumes:
       - ./backend:/var/www
     networks:
@@ -18,6 +20,8 @@ services:
       dockerfile: ../docker/nextjs/Dockerfile
       target: dev
     container_name: frontend
+    env_file:
+      - ./frontend/.env
     volumes:
       - ./frontend:/app
       - /app/node_modules

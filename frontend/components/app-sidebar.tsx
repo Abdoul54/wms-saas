@@ -1,22 +1,10 @@
-"use client"
+'use client'
 
-import * as React from "react"
-import {
-    BookOpen,
-    Bot,
-    Command,
-    Frame,
-    LifeBuoy,
-    Map,
-    PieChart,
-    Send,
-    Settings2,
-    SquareTerminal,
-    User,
-} from "lucide-react"
+import * as React from 'react'
+import { Command, User } from 'lucide-react'
 
-import { NavMain } from "./nav-main"
-import { NavUser } from "./nav-user"
+import { NavMain } from './nav-main'
+import { NavUser } from './nav-user'
 import {
     Sidebar,
     SidebarContent,
@@ -25,20 +13,12 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
-} from "@/components/ui/sidebar"
-
-const data = {
-    user: {
-        name: "shadcn",
-        email: "m@example.com",
-        avatar: "/avatars/shadcn.jpg",
-    },
-}
+} from '@/components/ui/sidebar'
 
 const nav = [
     {
-        title: "Users",
-        url: "/user",
+        title: 'Users',
+        url: '/user',
         icon: User,
     },
 ]
@@ -49,17 +29,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>
-                        <SidebarMenuButton size="lg" render={
-                            <a href="/">
-                                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                                    <Command className="size-4" />
-                                </div>
-                                <div className="grid flex-1 text-left text-sm leading-tight">
-                                    <span className="truncate font-medium">Acme Inc</span>
-                                    <span className="truncate text-xs">Enterprise</span>
-                                </div>
-                            </a>
-                        } />
+                        <SidebarMenuButton
+                            size="lg"
+                            render={
+                                <a href="/">
+                                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                                        <Command className="size-4" />
+                                    </div>
+                                    <div className="grid flex-1 text-left text-sm leading-tight">
+                                        <span className="truncate font-medium">Acme Inc</span>
+                                        <span className="truncate text-xs">Enterprise</span>
+                                    </div>
+                                </a>
+                            }
+                        />
                     </SidebarMenuItem>
                 </SidebarMenu>
             </SidebarHeader>
@@ -67,7 +50,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <NavMain items={nav} />
             </SidebarContent>
             <SidebarFooter>
-                <NavUser user={data.user} />
+                <NavUser />
             </SidebarFooter>
         </Sidebar>
     )

@@ -21,9 +21,16 @@ export default async function RootLayout({
     <html className={cn("font-sans", geist.variable)}>
       <body>
         <Providers session={session}>
-          <AppLayout>
-            {children}
-          </AppLayout>
+          {
+            session
+              ? (
+                <AppLayout>
+                  {children}
+                </AppLayout>
+              )
+              :
+              children
+          }
         </Providers>
       </body>
     </html>

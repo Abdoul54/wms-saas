@@ -1,36 +1,41 @@
-import { getToken } from 'next-auth/jwt'
+import { withAuth } from 'next-auth/middleware'
 import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
 
 const PUBLIC_ROUTES = ['/login', '/register']
 const DEFAULT_REDIRECT = '/'
 
-export async function proxy(req: NextRequest) {
-    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
-    const { nextUrl } = req
-    const isLoggedIn = !!token
-    const isPublic = PUBLIC_ROUTES.includes(nextUrl.pathname)
+export default withAuth(
+    function proxy(req) {
+        const token = req.nextauth.token
+        const { nextUrl } = req
+        const isPublic = PUBLIC_ROUTES.includes(nextUrl.pathname)
+        const isLoggedIn = !!token
 
-    // ✅ Must be first — a broken token should not count as "logged in"
-    if (token?.error === 'RefreshTokenError') {
-        if (isPublic) return NextResponse.next() // already on login, let through
-        const loginUrl = new URL('/login', nextUrl.origin)
-        loginUrl.searchParams.set('error', 'SessionExpired')
-        return NextResponse.redirect(loginUrl)
+        // Broken session — redirect to login regardless of route
+        if (token?.error === 'RefreshTokenError') {
+            if (isPublic) return NextResponse.next()
+            const url = new URL('/login', nextUrl.origin)
+            url.searchParams.set('error', 'SessionExpired')
+            return NextResponse.redirect(url)
+        }
+
+        // Logged-in user hitting a public route — send to dashboard
+        if (isLoggedIn && isPublic) {
+            return NextResponse.redirect(new URL(DEFAULT_REDIRECT, nextUrl.origin))
+        }
+
+        return NextResponse.next()
+    },
+    {
+        callbacks: {
+            // withAuth handles the unauthenticated → /login redirect via this callback
+            authorized({ token, req }) {
+                const isPublic = PUBLIC_ROUTES.includes(req.nextUrl.pathname)
+                return isPublic || !!token
+            },
+        },
     }
-
-    if (!isLoggedIn && !isPublic) {
-        const loginUrl = new URL('/login', nextUrl.origin)
-        loginUrl.searchParams.set('callbackUrl', nextUrl.pathname)
-        return NextResponse.redirect(loginUrl)
-    }
-
-    if (isLoggedIn && isPublic) {
-        return NextResponse.redirect(new URL(DEFAULT_REDIRECT, nextUrl.origin))
-    }
-
-    return NextResponse.next()
-}
+)
 
 export const config = {
     matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
